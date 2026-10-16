@@ -1,0 +1,25 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment variables and secrets
+.env
+.env.*
+
+# Editor settings
+.vscode/
+.idea/
+
+# Build files
+build/
+dist/
+*.spec
+
+# Logs and temporary files
+*.log
+*.tmp
