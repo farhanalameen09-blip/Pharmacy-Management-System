@@ -7,14 +7,12 @@ import database
 class TestPharmacyDatabase(unittest.TestCase):
 
     def setUp(self):
-        # Create a temporary directory for testing
+        """Create a temporary database for each test."""
         self.temp_dir = tempfile.TemporaryDirectory()
 
-        # Save the original database configuration
         self.original_db_path = database.DATABASE_PATH
         self.original_db_dir = database.DATABASE_DIR
 
-        # Use a separate temporary database for every test
         database.DATABASE_DIR = self.temp_dir.name
         database.DATABASE_PATH = os.path.join(
             self.temp_dir.name,
@@ -22,11 +20,10 @@ class TestPharmacyDatabase(unittest.TestCase):
         )
 
     def tearDown(self):
-        # Restore the original database configuration
+        """Restore the original configuration and clean up."""
         database.DATABASE_PATH = self.original_db_path
         database.DATABASE_DIR = self.original_db_dir
 
-        # Remove the temporary database
         self.temp_dir.cleanup()
 
     def test_database_connection(self):
@@ -66,7 +63,7 @@ class TestPharmacyDatabase(unittest.TestCase):
         self.assertIsNotNone(result)
 
     def test_default_admin_is_created_once(self):
-        """Test that running admin setup twice creates only one admin."""
+        """Test that repeated setup does not create duplicate admins."""
         database.create_tables()
 
         database.create_default_admin()
@@ -79,6 +76,21 @@ class TestPharmacyDatabase(unittest.TestCase):
             ).fetchall()
 
         self.assertEqual(len(users), 1)
+
+    def test_medicine_table_has_required_columns(self):
+        """Test that the medicines table has essential columns."""
+        database.create_tables()
+
+        with database.get_connection() as connection:
+            columns = connection.execute(
+                "PRAGMA table_info(medicines)"
+            ).fetchall()
+
+        column_names = [column["name"] for column in columns]
+
+        self.assertIn("id", column_names)
+        self.assertIn("name", column_names)
+        self.assertIn("price", column_names)
 
 
 if __name__ == "__main__":
