@@ -20,7 +20,7 @@ class TestPharmacyDatabase(unittest.TestCase):
         )
 
     def tearDown(self):
-        """Restore the original configuration and clean up."""
+        """Restore the original database configuration."""
         database.DATABASE_PATH = self.original_db_path
         database.DATABASE_DIR = self.original_db_dir
 
@@ -78,7 +78,7 @@ class TestPharmacyDatabase(unittest.TestCase):
         self.assertEqual(len(users), 1)
 
     def test_medicine_table_has_required_columns(self):
-        """Test that the medicines table has essential columns."""
+        """Test that the medicines table has the required columns."""
         database.create_tables()
 
         with database.get_connection() as connection:
@@ -88,9 +88,26 @@ class TestPharmacyDatabase(unittest.TestCase):
 
         column_names = [column["name"] for column in columns]
 
-        self.assertIn("id", column_names)
+        self.assertIn("medicine_id", column_names)
         self.assertIn("name", column_names)
-        self.assertIn("price", column_names)
+        self.assertIn("purchase_price", column_names)
+        self.assertIn("selling_price", column_names)
+        self.assertIn("quantity", column_names)
+        self.assertIn("expiry_date", column_names)
+
+    def test_customers_table_is_created(self):
+        """Test that the customers table exists."""
+        database.create_tables()
+
+        with database.get_connection() as connection:
+            result = connection.execute("""
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                AND name = 'customers'
+            """).fetchone()
+
+        self.assertIsNotNone(result)
 
 
 if __name__ == "__main__":
