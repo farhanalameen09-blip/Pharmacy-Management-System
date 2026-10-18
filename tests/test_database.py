@@ -7,7 +7,7 @@ import database
 class TestPharmacyDatabase(unittest.TestCase):
 
     def setUp(self):
-        """Create a temporary database for each test."""
+        """Create a separate temporary database for each test."""
         self.temp_dir = tempfile.TemporaryDirectory()
 
         self.original_db_path = database.DATABASE_PATH
@@ -27,7 +27,7 @@ class TestPharmacyDatabase(unittest.TestCase):
         self.temp_dir.cleanup()
 
     def test_database_connection(self):
-        """Test that the database connection works."""
+        """Test that a database connection works."""
         with database.get_connection() as connection:
             result = connection.execute("SELECT 1").fetchone()
 
@@ -48,7 +48,7 @@ class TestPharmacyDatabase(unittest.TestCase):
         self.assertIsNotNone(result)
 
     def test_tables_can_be_created_twice(self):
-        """Test that creating tables twice does not cause an error."""
+        """Test that tables can be created repeatedly."""
         database.create_tables()
         database.create_tables()
 
@@ -78,7 +78,7 @@ class TestPharmacyDatabase(unittest.TestCase):
         self.assertEqual(len(users), 1)
 
     def test_medicine_table_has_required_columns(self):
-        """Test that the medicines table has the required columns."""
+        """Test that required medicine columns exist."""
         database.create_tables()
 
         with database.get_connection() as connection:
