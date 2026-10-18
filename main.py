@@ -1,4 +1,6 @@
 import customtkinter as ctk # type: ignore
+import os
+import subprocess
 
 from tkinter import messagebox
 from datetime import datetime
@@ -42,6 +44,8 @@ class PharmacyApp(ctk.CTk):
         self.current_user = None
         self.current_user_id = None
         self.current_role = None
+        self.touch_mode = False
+        self._touch_original_sizes = {}
 
         # Initialize database
         try:
@@ -258,6 +262,147 @@ class PharmacyApp(ctk.CTk):
             hover_color=("gray80", "#385574"),
             command=self.show_settings
         ).pack(side="left", padx=6)
+
+        self.touch_mode_button = ctk.CTkButton(
+            actions,
+            text="👆 Touch Mode: Off",
+            width=150,
+            height=40,
+            corner_radius=12,
+            command=self.toggle_touch_mode
+        )
+        self.touch_mode_button.pack(side="left", padx=6)
+
+        ctk.CTkButton(
+            actions,
+            text="⌨ Keyboard",
+            width=115,
+            height=40,
+            corner_radius=12,
+            command=self.open_on_screen_keyboard
+        ).pack(side="left", padx=6)
+
+        ctk.CTkButton(
+            actions,
+            text="🖱 Touchpad Help",
+            width=145,
+            height=40,
+            corner_radius=12,
+            command=self.show_touchpad_help
+        ).pack(side="left", padx=6)
+
+    def toggle_touch_mode(self):
+        """Toggle larger, easier-to-tap controls throughout the current page."""
+        self.touch_mode = not self.touch_mode
+        self.apply_touch_mode_to_widgets(self)
+
+        if hasattr(self, "touch_mode_button") and self.touch_mode_button.winfo_exists():
+            self.touch_mode_button.configure(
+                text="👆 Touch Mode: On" if self.touch_mode else "👆 Touch Mode: Off"
+            )
+
+    def apply_touch_mode_to_widgets(self, parent):
+        """Apply touch-friendly sizing safely to supported CustomTkinter widgets."""
+        for widget in parent.winfo_children():
+            try:
+                widget_class = widget.__class__.__name__
+
+                if widget_class in {
+                    "CTkButton", "CTkEntry", "CTkComboBox", "CTkOptionMenu",
+                    "CTkCheckBox", "CTkSwitch", "CTkRadioButton"
+                }:
+                    if widget not in self._touch_original_sizes:
+                        self._touch_original_sizes[widget] = {
+                            "height": widget.cget("height") if "height" in widget.keys() else None,
+                            "font": widget.cget("font") if "font" in widget.keys() else None,
+                        }
+
+                    original = self._touch_original_sizes[widget]
+                    if self.touch_mode:
+                        changes = {}
+                        if "height" in widget.keys():
+                            changes["height"] = max(46, int(original["height"] or 0))
+                        if "font" in widget.keys() and original["font"] is not None:
+                            try:
+                                font = original["font"]
+                                size = font.cget("size") if hasattr(font, "cget") else 12
+                                family = font.cget("family") if hasattr(font, "cget") else "Arial"
+                                weight = font.cget("weight") if hasattr(font, "cget") else "normal"
+                                changes["font"] = ctk.CTkFont(
+                                    family=family, size=max(14, abs(int(size))), weight=weight
+                                )
+                            except Exception:
+                                pass
+                        if changes:
+                            widget.configure(**changes)
+                    else:
+                        changes = {}
+                        if original["height"] is not None:
+                            changes["height"] = original["height"]
+                        if original["font"] is not None:
+                            changes["font"] = original["font"]
+                        if changes:
+                            widget.configure(**changes)
+            except Exception:
+                # Some third-party or custom widgets don't support these options.
+                pass
+
+            try:
+                self.apply_touch_mode_to_widgets(widget)
+            except Exception:
+                pass
+
+    def open_on_screen_keyboard(self):
+        """Open Windows' built-in on-screen keyboard."""
+        try:
+            subprocess.Popen(["osk.exe"], shell=False)
+        except Exception:
+            try:
+                os.startfile(os.path.join(os.environ.get("WINDIR", r"C:\\Windows"), "System32", "osk.exe"))
+            except Exception as error:
+                messagebox.showerror(
+                    "On-Screen Keyboard",
+                    "Windows could not open the on-screen keyboard. "
+                    "You can open it manually from Windows Settings > Accessibility > Keyboard.\\n\\n"
+                    f"Details: {error}",
+                    parent=self
+                )
+
+    def show_touchpad_help(self):
+        """Explain common touchpad actions; actual gestures are handled by Windows."""
+        popup = ctk.CTkToplevel(self)
+        popup.title("Touchpad & Touchscreen Help")
+        popup.geometry("500x430")
+        popup.minsize(440, 380)
+        popup.transient(self)
+        popup.grab_set()
+
+        ctk.CTkLabel(
+            popup,
+            text="Touchpad & Touchscreen Help",
+            font=ctk.CTkFont(size=22, weight="bold")
+        ).pack(anchor="w", padx=22, pady=(22, 12))
+
+        tips = (
+            "• Single tap or click: select a button or field\\n\\n"
+            "• Two-finger swipe: scroll lists and pages (if enabled in Windows)\\n\\n"
+            "• Pinch to zoom: supported only where Windows and the device/app allow it\\n\\n"
+            "• Touch Mode: makes supported controls larger and easier to tap\\n\\n"
+            "• Keyboard: opens the Windows on-screen keyboard\\n\\n"
+            "Note: touchpad gestures are controlled by Windows and your device driver."
+        )
+        ctk.CTkLabel(
+            popup,
+            text=tips,
+            justify="left",
+            anchor="w",
+            wraplength=445,
+            font=ctk.CTkFont(size=14)
+        ).pack(fill="both", expand=True, padx=22, pady=8)
+
+        ctk.CTkButton(
+            popup, text="Close", height=44, command=popup.destroy
+        ).pack(pady=(8, 20))
 
     def get_theme_button_text(self):
         """Return a label describing the theme that can be switched to."""

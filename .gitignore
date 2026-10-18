@@ -23,3 +23,5 @@ dist/
 # Logs and temporary files
 *.log
 *.tmp
+# Local pharmacy database
+database/pharmacy.db

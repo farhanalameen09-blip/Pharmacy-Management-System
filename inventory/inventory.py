@@ -19,6 +19,11 @@ class InventoryPage(ctk.CTkFrame):
         self.filter_var = ctk.StringVar(value="All")
 
         self.build_ui()
+
+        # Update the table whenever the search text changes, including when
+        # text is pasted or cleared (not only when keys are released).
+        self.search_var.trace_add("write", self._on_search_change)
+
         self.load_inventory()
 
     # =========================================================
@@ -128,11 +133,6 @@ class InventoryPage(ctk.CTkFrame):
             side="left",
             fill="x",
             expand=True
-        )
-
-        search_entry.bind(
-            "<KeyRelease>",
-            lambda event: self.load_inventory()
         )
 
         filter_menu = ctk.CTkOptionMenu(
@@ -423,71 +423,66 @@ class InventoryPage(ctk.CTkFrame):
             return "Unknown"
 
     # =========================================================
+    # SEARCH CHANGE HANDLER
+    # =========================================================
+
+    def _on_search_change(self, *_):
+        """Refresh the inventory table when the search text changes."""
+        # Tkinter variable traces can run during widget initialization.
+        # The tree exists by the time this trace is registered, but this
+        # guard also keeps the handler safe if the UI is later refactored.
+        if hasattr(self, "tree"):
+            self.load_inventory()
+
+    # =========================================================
     # LOAD INVENTORY
     # =========================================================
 
     def load_inventory(self):
-
-        # Clear old rows
-
+        """Load inventory from the database and refresh the table and counters."""
+        # Clear old rows before displaying the latest results.
         for item in self.tree.get_children():
-
             self.tree.delete(item)
 
         try:
-
-            connection = get_connection()
-
-            cursor = connection.cursor()
-
-            cursor.execute(
-                """
-                SELECT
-                    m.medicine_id,
-                    m.name,
-                    m.category,
-                    m.batch_no,
-                    COALESCE(s.name, 'Not Assigned') AS supplier_name,
-                    m.quantity,
-                    m.min_stock,
-                    m.expiry_date
-                FROM medicines m
-                LEFT JOIN suppliers s
-                    ON m.supplier_id = s.supplier_id
-                ORDER BY m.medicine_id DESC
-                """
-            )
-
-            medicines = cursor.fetchall()
-
-            connection.close()
-
-            # ---------------- COUNTERS ----------------
+            # Use the database connection as a context manager so it is
+            # always closed correctly, even if the query raises an error.
+            with get_connection() as connection:
+                medicines = connection.execute(
+                    """
+                    SELECT
+                        m.medicine_id,
+                        m.name,
+                        m.category,
+                        m.batch_no,
+                        COALESCE(s.name, 'Not Assigned') AS supplier_name,
+                        m.quantity,
+                        m.min_stock,
+                        m.expiry_date
+                    FROM medicines AS m
+                    LEFT JOIN suppliers AS s
+                        ON m.supplier_id = s.supplier_id
+                    ORDER BY m.medicine_id DESC
+                    """
+                ).fetchall()
 
             counts = {
                 "In Stock": 0,
                 "Low Stock": 0,
                 "Out of Stock": 0,
                 "Expired": 0,
-                "Near Expiry": 0
+                "Near Expiry": 0,
+                "Unknown": 0,
             }
 
-            search_text = (
-                self.search_var.get()
-                .strip()
-                .lower()
-            )
-
+            search_text = self.search_var.get().strip().casefold()
             selected_filter = self.filter_var.get()
-
             visible_rows = 0
 
             for medicine in medicines:
-
-                # ---------------- READ DATA ----------------
-
+                # sqlite3.Row supports named columns; tuple fallback keeps
+                # this compatible with other row-factory configurations.
                 try:
-
                     medicine_id = medicine["medicine_id"]
                     name = medicine["name"]
                     category = medicine["category"]
@@ -496,75 +491,41 @@ class InventoryPage(ctk.CTkFrame):
                     quantity = medicine["quantity"]
                     minimum_stock = medicine["min_stock"]
                     expiry = medicine["expiry_date"]
-
-                except Exception:
-
-                    medicine_id = medicine[0]
-                    name = medicine[1]
-                    category = medicine[2]
-                    batch = medicine[3]
-                    supplier = medicine[4]
-                    quantity = medicine[5]
-                    minimum_stock = medicine[6]
-                    expiry = medicine[7]
-
-                # ---------------- CLEAN DATA ----------------
+                except (TypeError, IndexError, KeyError):
+                    (
+                        medicine_id,
+                        name,
+                        category,
+                        batch,
+                        supplier,
+                        quantity,
+                        minimum_stock,
+                        expiry,
+                    ) = medicine
 
                 name = name or ""
                 category = category or ""
                 batch = batch or ""
                 supplier = supplier or "Not Assigned"
-                quantity = quantity or 0
-                minimum_stock = minimum_stock or 0
+                quantity = 0 if quantity is None else quantity
+                minimum_stock = 0 if minimum_stock is None else minimum_stock
                 expiry = expiry or ""
 
-                # ---------------- STATUS ----------------
+                status = self.get_status(quantity, minimum_stock, expiry)
+                counts[status] = counts.get(status, 0) + 1
 
-                status = self.get_status(
-                    quantity,
-                    minimum_stock,
-                    expiry
-                )
-
-                # Count every medicine before applying filter
-
-                if status in counts:
-
-                    counts[status] += 1
-
-                # ---------------- SEARCH ----------------
-
+                # Search medicine name, category, batch number, and supplier.
                 if search_text:
-
-                    search_content = (
-                        f"{name} "
-                        f"{category} "
-                        f"{batch} "
-                        f"{supplier}"
-                    ).lower()
-
-                    if search_text not in search_content:
-
+                    searchable_text = (
+                        f"{name} {category} {batch} {supplier}"
+                    ).casefold()
+                    if search_text not in searchable_text:
                         continue
 
-                # ---------------- FILTER ----------------
-
-                if (
-                    selected_filter != "All"
-                    and status != selected_filter
-                ):
-
+                if selected_filter != "All" and status != selected_filter:
                     continue
 
-                # ---------------- TAG ----------------
-
-                tag = status.lower().replace(
-                    " ",
-                    "_"
-                )
-
-                # ---------------- INSERT ROW ----------------
-
+                tag = status.lower().replace(" ", "_")
                 self.tree.insert(
                     "",
                     "end",
@@ -577,66 +538,39 @@ class InventoryPage(ctk.CTkFrame):
                         quantity,
                         minimum_stock,
                         expiry,
-                        status
+                        status,
                     ),
-                    tags=(tag,)
+                    tags=(tag,),
                 )
-
                 visible_rows += 1
 
-            # ---------------- UPDATE COUNTERS ----------------
-
-            self.in_stock_label.configure(
-                text=str(counts["In Stock"])
-            )
-
-            self.low_stock_label.configure(
-                text=str(counts["Low Stock"])
-            )
-
-            self.out_stock_label.configure(
-                text=str(counts["Out of Stock"])
-            )
-
-            self.expired_label.configure(
-                text=str(counts["Expired"])
-            )
-
-            self.near_expiry_label.configure(
-                text=str(counts["Near Expiry"])
-            )
-
-            # ---------------- EMPTY MESSAGE ----------------
+            # Counters show totals across all medicines, independent of the
+            # currently selected search text or status filter.
+            self.in_stock_label.configure(text=str(counts["In Stock"]))
+            self.low_stock_label.configure(text=str(counts["Low Stock"]))
+            self.out_stock_label.configure(text=str(counts["Out of Stock"]))
+            self.expired_label.configure(text=str(counts["Expired"]))
+            self.near_expiry_label.configure(text=str(counts["Near Expiry"]))
 
             if visible_rows == 0:
-
-                self.empty_label.configure(
-                    text="No inventory records found."
-                )
-
+                self.empty_label.configure(text="No inventory records found.")
                 self.empty_label.place(
                     relx=0.5,
                     rely=0.5,
-                    anchor="center"
+                    anchor="center",
                 )
-
             else:
-
                 self.empty_label.place_forget()
 
         except Exception as error:
-
-            print(
-                "Inventory Error:",
-                error
-            )
-
+            # Keep the failure visible in the terminal for debugging and
+            # show a helpful message inside the inventory page.
+            print(f"Inventory Error: {error}")
             self.empty_label.configure(
-                text="Unable to load inventory."
+                text="Unable to load inventory. Check the database and terminal."
             )
-
             self.empty_label.place(
                 relx=0.5,
                 rely=0.5,
-                anchor="center"
+                anchor="center",
             )

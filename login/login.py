@@ -1,5 +1,4 @@
-import customtkinter as ctk # type: ignore
-
+import customtkinter as ctk  # type: ignore
 import hashlib
 
 from database import get_connection
@@ -9,7 +8,6 @@ from config import Colors
 class LoginFrame(ctk.CTkFrame):
 
     def __init__(self, parent, login_success):
-
         super().__init__(parent, fg_color="transparent")
 
         self.parent = parent
@@ -22,7 +20,6 @@ class LoginFrame(ctk.CTkFrame):
     # ==========================================
 
     def create_ui(self):
-
         container = ctk.CTkFrame(
             self,
             corner_radius=20,
@@ -35,72 +32,46 @@ class LoginFrame(ctk.CTkFrame):
             relx=0.5,
             rely=0.5,
             anchor="center",
-            relwidth=0.42,
-            relheight=0.72
+            relwidth=0.60,
+            relheight=0.90
         )
 
-        # TITLE
         title = ctk.CTkLabel(
             container,
             text="💊 Pharmacy Management System",
             text_color=Colors.PRIMARY,
-            font=ctk.CTkFont(
-                size=28,
-                weight="bold"
-            )
+            font=ctk.CTkFont(size=28, weight="bold")
         )
+        title.pack(pady=(30, 5))
 
-        title.pack(
-            pady=(40, 5)
-        )
-
-        # QUALITY GOAL
         quality = ctk.CTkLabel(
             container,
             text="Sign in to continue",
             text_color=Colors.TEXT_MUTED,
             font=ctk.CTkFont(size=14)
         )
+        quality.pack(pady=(0, 25))
 
-        quality.pack(
-            pady=(0, 30)
-        )
-
-        # USERNAME
-        username_label = ctk.CTkLabel(
+        ctk.CTkLabel(
             container,
             text="Username",
             anchor="w"
-        )
-
-        username_label.pack(
-            fill="x",
-            padx=50
-        )
+        ).pack(fill="x", padx=40)
 
         self.username_entry = ctk.CTkEntry(
             container,
             placeholder_text="Enter username",
             height=40
         )
-
         self.username_entry.pack(
-            fill="x",
-            padx=50,
-            pady=(5, 15)
+            fill="x", padx=40, pady=(5, 15)
         )
 
-        # PASSWORD
-        password_label = ctk.CTkLabel(
+        ctk.CTkLabel(
             container,
             text="Password",
             anchor="w"
-        )
-
-        password_label.pack(
-            fill="x",
-            padx=50
-        )
+        ).pack(fill="x", padx=40)
 
         self.password_entry = ctk.CTkEntry(
             container,
@@ -108,90 +79,50 @@ class LoginFrame(ctk.CTkFrame):
             show="*",
             height=40
         )
-
         self.password_entry.pack(
-            fill="x",
-            padx=50,
-            pady=(5, 5)
+            fill="x", padx=40, pady=(5, 5)
         )
 
-        # SHOW PASSWORD
-        self.show_password_var = ctk.BooleanVar(
-            value=False
-        )
+        self.show_password_var = ctk.BooleanVar(value=False)
 
-        show_password = ctk.CTkCheckBox(
+        ctk.CTkCheckBox(
             container,
             text="Show Password",
             variable=self.show_password_var,
             command=self.toggle_password
-        )
+        ).pack(anchor="w", padx=40, pady=5)
 
-        show_password.pack(
-            anchor="w",
-            padx=50,
-            pady=5
-        )
+        self.remember_var = ctk.BooleanVar(value=False)
 
-        # REMEMBER USERNAME
-        self.remember_var = ctk.BooleanVar(
-            value=False
-        )
-
-        remember = ctk.CTkCheckBox(
+        ctk.CTkCheckBox(
             container,
             text="Remember Username",
             variable=self.remember_var
-        )
+        ).pack(anchor="w", padx=40, pady=5)
 
-        remember.pack(
-            anchor="w",
-            padx=50,
-            pady=5
-        )
-
-        # MESSAGE
         self.message = ctk.CTkLabel(
             container,
             text="",
             font=ctk.CTkFont(size=13)
         )
+        self.message.pack(pady=10)
 
-        self.message.pack(
-            pady=10
-        )
-
-        # LOGIN BUTTON
-        login_button = ctk.CTkButton(
+        ctk.CTkButton(
             container,
             text="Login",
             height=42,
             command=self.login
-        )
+        ).pack(fill="x", padx=40, pady=5)
 
-        login_button.pack(
-            fill="x",
-            padx=50,
-            pady=5
-        )
-
-        # CLEAR BUTTON
-        clear_button = ctk.CTkButton(
+        ctk.CTkButton(
             container,
             text="Clear",
             height=42,
             fg_color="gray",
             hover_color="darkgray",
             command=self.clear
-        )
+        ).pack(fill="x", padx=40, pady=(5, 25))
 
-        clear_button.pack(
-            fill="x",
-            padx=50,
-            pady=5
-        )
-
-        # ENTER KEY
         self.password_entry.bind(
             "<Return>",
             lambda event: self.login()
@@ -204,157 +135,86 @@ class LoginFrame(ctk.CTkFrame):
     # ==========================================
 
     def toggle_password(self):
-
-        if self.show_password_var.get():
-
-            self.password_entry.configure(
-                show=""
-            )
-
-        else:
-
-            self.password_entry.configure(
-                show="*"
-            )
+        self.password_entry.configure(
+            show="" if self.show_password_var.get() else "*"
+        )
 
     # ==========================================
     # CLEAR
     # ==========================================
 
     def clear(self):
-
-        self.username_entry.delete(
-            0,
-            "end"
-        )
-
-        self.password_entry.delete(
-            0,
-            "end"
-        )
-
-        self.message.configure(
-            text=""
-        )
-
+        self.username_entry.delete(0, "end")
+        self.password_entry.delete(0, "end")
+        self.message.configure(text="")
         self.username_entry.focus()
 
     # ==========================================
     # HASH PASSWORD
     # ==========================================
 
-    def hash_password(self, password):
-
-        return hashlib.sha256(
-            password.encode()
-        ).hexdigest()
+    @staticmethod
+    def hash_password(password):
+        return hashlib.sha256(password.encode()).hexdigest()
 
     # ==========================================
     # LOGIN
     # ==========================================
 
     def login(self):
-
         username = self.username_entry.get().strip()
         password = self.password_entry.get()
 
-        # CHECK USERNAME
         if not username:
-
             self.message.configure(
                 text="Please enter your username."
             )
-
             self.username_entry.focus()
-
             return
 
-        # CHECK PASSWORD
         if not password:
-
             self.message.configure(
                 text="Please enter your password."
             )
-
             self.password_entry.focus()
-
             return
 
-        hashed_password = self.hash_password(
-            password
-        )
-
-        connection = None
-
         try:
+            hashed_password = self.hash_password(password)
 
-            connection = get_connection()
+            with get_connection() as connection:
+                connection.row_factory = __import__("sqlite3").Row
 
-            cursor = connection.cursor()
-
-            cursor.execute(
-                """
-                SELECT user_id, username, role
-                FROM users
-                WHERE username = ?
-                AND password = ?
-                """,
-                (
-                    username,
-                    hashed_password
-                )
-            )
-
-            user = cursor.fetchone()
+                user = connection.execute(
+                    """
+                    SELECT user_id, username, role
+                    FROM users
+                    WHERE username = ? AND password = ?
+                    """,
+                    (username, hashed_password)
+                ).fetchone()
 
             if user:
-
-                # ==================================
-                # LOGIN SUCCESS
-                # ==================================
-
                 user_data = dict(user)
 
-                logged_username = user_data["username"]
-                logged_role = user_data["role"]
-
                 print(
-                    f"Login successful: {logged_username} ({logged_role})"
+                    f"Login successful: "
+                    f"{user_data['username']} ({user_data['role']})"
                 )
 
-                # IMPORTANT:
-                # main.py expects username AND role
-                self.login_success(
-                    logged_username,
-                    logged_role
-                )
+                # Pass the user information to the main application.
+                self.login_success(user_data)
 
             else:
-
                 self.message.configure(
                     text="Incorrect username or password."
                 )
-
-                self.password_entry.delete(
-                    0,
-                    "end"
-                )
-
+                self.password_entry.delete(0, "end")
                 self.password_entry.focus()
 
         except Exception as error:
-
-            print(
-                "Login error:",
-                error
-            )
+            print(f"Login error: {error}")
 
             self.message.configure(
-                text="Unable to process login."
+                text="Unable to process login. Check terminal."
             )
-
-        finally:
-
-            if connection:
-
-                connection.close()

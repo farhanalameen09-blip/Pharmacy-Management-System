@@ -1,4 +1,4 @@
-import customtkinter as ctk # type: ignore
+import customtkinter as ctk  # type: ignore
 
 from tkinter import messagebox
 import hashlib
@@ -33,42 +33,22 @@ class SettingsPage(ctk.CTkFrame):
 
     def create_ui(self):
 
-        # ----------------------------------------------------
-        # HEADER
-        # ----------------------------------------------------
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.pack(fill="x", padx=30, pady=(25, 10))
 
-        header = ctk.CTkFrame(
-            self,
-            fg_color="transparent"
-        )
-        header.pack(
-            fill="x",
-            padx=30,
-            pady=(25, 10)
-        )
-
-        title = ctk.CTkLabel(
+        ctk.CTkLabel(
             header,
             text="⚙ Settings",
-            font=ctk.CTkFont(
-                size=32,
-                weight="bold"
-            )
-        )
-        title.pack(side="left")
+            font=ctk.CTkFont(size=32, weight="bold")
+        ).pack(side="left")
 
-        dashboard_button = ctk.CTkButton(
+        ctk.CTkButton(
             header,
             text="🏠 Dashboard",
             width=140,
             height=38,
             command=self.dashboard_callback
-        )
-        dashboard_button.pack(side="right")
-
-        # ----------------------------------------------------
-        # SCROLLABLE CONTAINER
-        # ----------------------------------------------------
+        ).pack(side="right")
 
         container = ctk.CTkScrollableFrame(
             self,
@@ -81,40 +61,21 @@ class SettingsPage(ctk.CTkFrame):
             pady=10
         )
 
-        # ====================================================
         # PROFILE SECTION
-        # ====================================================
 
-        profile_frame = ctk.CTkFrame(
-            container,
-            corner_radius=12
-        )
-        profile_frame.pack(
-            fill="x",
-            pady=10
-        )
+        profile_frame = ctk.CTkFrame(container, corner_radius=12)
+        profile_frame.pack(fill="x", pady=10)
 
         ctk.CTkLabel(
             profile_frame,
             text="👤 Profile",
-            font=ctk.CTkFont(
-                size=22,
-                weight="bold"
-            )
-        ).pack(
-            anchor="w",
-            padx=25,
-            pady=(20, 15)
-        )
+            font=ctk.CTkFont(size=22, weight="bold")
+        ).pack(anchor="w", padx=25, pady=(20, 15))
 
         ctk.CTkLabel(
             profile_frame,
-            text="Username",
-            font=ctk.CTkFont(size=14)
-        ).pack(
-            anchor="w",
-            padx=25
-        )
+            text="Username"
+        ).pack(anchor="w", padx=25)
 
         self.username_entry = ctk.CTkEntry(
             profile_frame,
@@ -125,20 +86,12 @@ class SettingsPage(ctk.CTkFrame):
             padx=25,
             pady=(5, 15)
         )
-
-        self.username_entry.insert(
-            0,
-            self.username
-        )
+        self.username_entry.insert(0, self.username)
 
         ctk.CTkLabel(
             profile_frame,
-            text="Role",
-            font=ctk.CTkFont(size=14)
-        ).pack(
-            anchor="w",
-            padx=25
-        )
+            text="Role"
+        ).pack(anchor="w", padx=25)
 
         self.role_entry = ctk.CTkEntry(
             profile_frame,
@@ -149,49 +102,24 @@ class SettingsPage(ctk.CTkFrame):
             padx=25,
             pady=(5, 20)
         )
+        self.role_entry.insert(0, self.role)
+        self.role_entry.configure(state="disabled")
 
-        self.role_entry.insert(
-            0,
-            self.role
-        )
-
-        self.role_entry.configure(
-            state="disabled"
-        )
-
-        # ====================================================
         # PASSWORD SECTION
-        # ====================================================
 
-        password_frame = ctk.CTkFrame(
-            container,
-            corner_radius=12
-        )
-        password_frame.pack(
-            fill="x",
-            pady=10
-        )
+        password_frame = ctk.CTkFrame(container, corner_radius=12)
+        password_frame.pack(fill="x", pady=10)
 
         ctk.CTkLabel(
             password_frame,
             text="🔐 Change Password",
-            font=ctk.CTkFont(
-                size=22,
-                weight="bold"
-            )
-        ).pack(
-            anchor="w",
-            padx=25,
-            pady=(20, 15)
-        )
+            font=ctk.CTkFont(size=22, weight="bold")
+        ).pack(anchor="w", padx=25, pady=(20, 15))
 
         ctk.CTkLabel(
             password_frame,
             text="Current Password"
-        ).pack(
-            anchor="w",
-            padx=25
-        )
+        ).pack(anchor="w", padx=25)
 
         self.current_password = ctk.CTkEntry(
             password_frame,
@@ -207,10 +135,7 @@ class SettingsPage(ctk.CTkFrame):
         ctk.CTkLabel(
             password_frame,
             text="New Password"
-        ).pack(
-            anchor="w",
-            padx=25
-        )
+        ).pack(anchor="w", padx=25)
 
         self.new_password = ctk.CTkEntry(
             password_frame,
@@ -226,10 +151,7 @@ class SettingsPage(ctk.CTkFrame):
         ctk.CTkLabel(
             password_frame,
             text="Confirm New Password"
-        ).pack(
-            anchor="w",
-            padx=25
-        )
+        ).pack(anchor="w", padx=25)
 
         self.confirm_password = ctk.CTkEntry(
             password_frame,
@@ -253,47 +175,28 @@ class SettingsPage(ctk.CTkFrame):
             anchor="w"
         )
 
-        # ====================================================
         # APPEARANCE SECTION
-        # ====================================================
 
         appearance_frame = ctk.CTkFrame(
             container,
             corner_radius=12
         )
-        appearance_frame.pack(
-            fill="x",
-            pady=10
-        )
+        appearance_frame.pack(fill="x", pady=10)
 
         ctk.CTkLabel(
             appearance_frame,
             text="🎨 Appearance",
-            font=ctk.CTkFont(
-                size=22,
-                weight="bold"
-            )
-        ).pack(
-            anchor="w",
-            padx=25,
-            pady=(20, 15)
-        )
+            font=ctk.CTkFont(size=22, weight="bold")
+        ).pack(anchor="w", padx=25, pady=(20, 15))
 
         ctk.CTkLabel(
             appearance_frame,
             text="Theme"
-        ).pack(
-            anchor="w",
-            padx=25
-        )
+        ).pack(anchor="w", padx=25)
 
         self.theme_option = ctk.CTkOptionMenu(
             appearance_frame,
-            values=[
-                "Light",
-                "Dark",
-                "System"
-            ],
+            values=["Light", "Dark", "System"],
             width=200
         )
         self.theme_option.pack(
@@ -315,31 +218,19 @@ class SettingsPage(ctk.CTkFrame):
             pady=(5, 20)
         )
 
-        # ====================================================
         # KEYBOARD SHORTCUTS SECTION
-        # ====================================================
 
         shortcuts_frame = ctk.CTkFrame(
             container,
             corner_radius=12
         )
-        shortcuts_frame.pack(
-            fill="x",
-            pady=10
-        )
+        shortcuts_frame.pack(fill="x", pady=10)
 
         ctk.CTkLabel(
             shortcuts_frame,
             text="⌨ Keyboard Shortcuts",
-            font=ctk.CTkFont(
-                size=22,
-                weight="bold"
-            )
-        ).pack(
-            anchor="w",
-            padx=25,
-            pady=(20, 15)
-        )
+            font=ctk.CTkFont(size=22, weight="bold")
+        ).pack(anchor="w", padx=25, pady=(20, 15))
 
         shortcuts = [
             ("Ctrl + H", "Dashboard"),
@@ -358,71 +249,39 @@ class SettingsPage(ctk.CTkFrame):
                 shortcuts_frame,
                 fg_color="transparent"
             )
-            row.pack(
-                fill="x",
-                padx=25,
-                pady=4
-            )
+            row.pack(fill="x", padx=25, pady=4)
 
-            shortcut_label = ctk.CTkLabel(
+            ctk.CTkLabel(
                 row,
                 text=shortcut,
                 width=130,
                 anchor="w",
-                font=ctk.CTkFont(
-                    size=14,
-                    weight="bold"
-                )
-            )
-            shortcut_label.pack(
-                side="left"
-            )
+                font=ctk.CTkFont(size=14, weight="bold")
+            ).pack(side="left")
 
-            action_label = ctk.CTkLabel(
+            ctk.CTkLabel(
                 row,
                 text=action,
                 anchor="w",
                 font=ctk.CTkFont(size=14)
-            )
-            action_label.pack(
-                side="left"
-            )
+            ).pack(side="left")
 
         ctk.CTkLabel(
             shortcuts_frame,
             text="Use these shortcuts to quickly navigate through the system.",
             text_color=("gray40", "gray70")
-        ).pack(
-            anchor="w",
-            padx=25,
-            pady=(10, 20)
-        )
+        ).pack(anchor="w", padx=25, pady=(10, 20))
 
-        # ====================================================
         # ACCOUNT SECTION
-        # ====================================================
 
-        account_frame = ctk.CTkFrame(
-            container,
-            corner_radius=12
-        )
-        account_frame.pack(
-            fill="x",
-            pady=10
-        )
+        account_frame = ctk.CTkFrame(container, corner_radius=12)
+        account_frame.pack(fill="x", pady=10)
 
         ctk.CTkLabel(
             account_frame,
             text="🚪 Account",
-            font=ctk.CTkFont(
-                size=22,
-                weight="bold"
-            )
-        ).pack(
-            anchor="w",
-            padx=25,
-            pady=(20, 15)
-        )
+            font=ctk.CTkFont(size=22, weight="bold")
+        ).pack(anchor="w", padx=25, pady=(20, 15))
 
         ctk.CTkButton(
             account_frame,
@@ -431,11 +290,7 @@ class SettingsPage(ctk.CTkFrame):
             fg_color="#C0392B",
             hover_color="#A93226",
             command=self.logout
-        ).pack(
-            anchor="w",
-            padx=25,
-            pady=(5, 20)
-        )
+        ).pack(anchor="w", padx=25, pady=(5, 20))
 
     # ========================================================
     # LOAD SAVED THEME
@@ -448,38 +303,27 @@ class SettingsPage(ctk.CTkFrame):
         if self.user_id:
 
             try:
+                with get_connection() as conn:
+                    result = conn.execute(
+                        """
+                        SELECT theme
+                        FROM user_settings
+                        WHERE user_id = ?
+                        """,
+                        (self.user_id,)
+                    ).fetchone()
 
-                conn = get_connection()
-                cursor = conn.cursor()
+                if result and result["theme"]:
 
-                cursor.execute(
-                    """
-                    SELECT theme
-                    FROM user_settings
-                    WHERE user_id = ?
-                    """,
-                    (self.user_id,)
-                )
-
-                result = cursor.fetchone()
-
-                conn.close()
-
-                if result and result[0]:
-
-                    saved_theme = result[0].lower()
+                    saved_theme = result["theme"].lower()
 
                     if saved_theme == "dark":
                         theme = "Dark"
-
                     elif saved_theme == "system":
                         theme = "System"
 
-                    else:
-                        theme = "Light"
-
-            except Exception:
-                theme = "Light"
+            except Exception as error:
+                print(f"Theme loading error: {error}")
 
         self.theme_option.set(theme)
 
@@ -489,12 +333,11 @@ class SettingsPage(ctk.CTkFrame):
 
     def change_password(self):
 
-        current = self.current_password.get().strip()
-        new = self.new_password.get().strip()
-        confirm = self.confirm_password.get().strip()
+        current = self.current_password.get()
+        new = self.new_password.get()
+        confirm = self.confirm_password.get()
 
         if not current or not new or not confirm:
-
             messagebox.showwarning(
                 "Missing Information",
                 "Please fill all password fields."
@@ -502,7 +345,6 @@ class SettingsPage(ctk.CTkFrame):
             return
 
         if new != confirm:
-
             messagebox.showerror(
                 "Password Error",
                 "New password and confirm password do not match."
@@ -510,7 +352,6 @@ class SettingsPage(ctk.CTkFrame):
             return
 
         if len(new) < 6:
-
             messagebox.showwarning(
                 "Weak Password",
                 "New password must contain at least 6 characters."
@@ -518,66 +359,43 @@ class SettingsPage(ctk.CTkFrame):
             return
 
         if not self.user_id:
-
             messagebox.showerror(
                 "Password Error",
                 "User information is missing."
             )
             return
 
+        old_hash = hashlib.sha256(current.encode()).hexdigest()
+        new_hash = hashlib.sha256(new.encode()).hexdigest()
+
         try:
+            with get_connection() as conn:
 
-            conn = get_connection()
-            cursor = conn.cursor()
+                user = conn.execute(
+                    """
+                    SELECT user_id
+                    FROM users
+                    WHERE user_id = ?
+                    AND password = ?
+                    """,
+                    (self.user_id, old_hash)
+                ).fetchone()
 
-            old_hash = hashlib.sha256(
-                current.encode()
-            ).hexdigest()
+                if not user:
+                    messagebox.showerror(
+                        "Password Error",
+                        "Current password is incorrect."
+                    )
+                    return
 
-            cursor.execute(
-                """
-                SELECT user_id
-                FROM users
-                WHERE user_id = ?
-                AND password = ?
-                """,
-                (
-                    self.user_id,
-                    old_hash
+                conn.execute(
+                    """
+                    UPDATE users
+                    SET password = ?
+                    WHERE user_id = ?
+                    """,
+                    (new_hash, self.user_id)
                 )
-            )
-
-            user = cursor.fetchone()
-
-            if not user:
-
-                conn.close()
-
-                messagebox.showerror(
-                    "Password Error",
-                    "Current password is incorrect."
-                )
-
-                return
-
-            new_hash = hashlib.sha256(
-                new.encode()
-            ).hexdigest()
-
-            cursor.execute(
-                """
-                UPDATE users
-                SET password = ?
-                WHERE user_id = ?
-                """,
-                (
-                    new_hash,
-                    self.user_id
-                )
-            )
-
-            conn.commit()
-            conn.close()
 
             self.current_password.delete(0, "end")
             self.new_password.delete(0, "end")
@@ -589,7 +407,6 @@ class SettingsPage(ctk.CTkFrame):
             )
 
         except Exception as error:
-
             messagebox.showerror(
                 "Database Error",
                 f"Unable to change password.\n\n{error}"
@@ -604,62 +421,43 @@ class SettingsPage(ctk.CTkFrame):
         theme = self.theme_option.get()
 
         try:
-
             if theme == "Light":
                 ctk.set_appearance_mode("light")
-
             elif theme == "Dark":
                 ctk.set_appearance_mode("dark")
-
             else:
                 ctk.set_appearance_mode("system")
 
             if self.user_id:
 
-                conn = get_connection()
-                cursor = conn.cursor()
+                with get_connection() as conn:
 
-                cursor.execute(
-                    """
-                    SELECT setting_id
-                    FROM user_settings
-                    WHERE user_id = ?
-                    """,
-                    (self.user_id,)
-                )
-
-                existing = cursor.fetchone()
-
-                if existing:
-
-                    cursor.execute(
+                    existing = conn.execute(
                         """
-                        UPDATE user_settings
-                        SET theme = ?
+                        SELECT setting_id
+                        FROM user_settings
                         WHERE user_id = ?
                         """,
-                        (
-                            theme.lower(),
-                            self.user_id
+                        (self.user_id,)
+                    ).fetchone()
+
+                    if existing:
+                        conn.execute(
+                            """
+                            UPDATE user_settings
+                            SET theme = ?
+                            WHERE user_id = ?
+                            """,
+                            (theme.lower(), self.user_id)
                         )
-                    )
-
-                else:
-
-                    cursor.execute(
-                        """
-                        INSERT INTO user_settings
-                        (user_id, theme)
-                        VALUES (?, ?)
-                        """,
-                        (
-                            self.user_id,
-                            theme.lower()
+                    else:
+                        conn.execute(
+                            """
+                            INSERT INTO user_settings (user_id, theme)
+                            VALUES (?, ?)
+                            """,
+                            (self.user_id, theme.lower())
                         )
-                    )
-
-                conn.commit()
-                conn.close()
 
             messagebox.showinfo(
                 "Settings Saved",
@@ -667,7 +465,6 @@ class SettingsPage(ctk.CTkFrame):
             )
 
         except Exception as error:
-
             messagebox.showerror(
                 "Settings Error",
                 f"Unable to save settings.\n\n{error}"
