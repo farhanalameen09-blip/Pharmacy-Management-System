@@ -945,21 +945,16 @@ class PharmacyApp(ctk.CTk):
     # --------------------------------------------------------
 
     def show_inventory(self):
-
         self.clear_content()
-
         self.set_active_menu("Inventory")
 
         page = InventoryPage(
             self.content_frame,
-            self.show_dashboard_page
+            self.show_dashboard_page,
+            self.show_medicines
         )
 
-        page.pack(
-            fill="both",
-            expand=True
-        )
-
+        page.pack(fill="both", expand=True)
     # --------------------------------------------------------
 
     def show_sales(self):

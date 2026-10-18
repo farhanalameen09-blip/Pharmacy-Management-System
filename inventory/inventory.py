@@ -1,27 +1,24 @@
-import customtkinter as ctk # type: ignore
-
-from ui_kit import styled_treeview
+import customtkinter as ctk  # type: ignore
 from tkinter import ttk
 from datetime import datetime, timedelta
 
+from ui_kit import styled_treeview
 from database import get_connection
 
 
 class InventoryPage(ctk.CTkFrame):
 
-    def __init__(self, parent, back_to_dashboard):
-
+    def __init__(self, parent, back_to_dashboard, open_medicines=None):
         super().__init__(parent, fg_color="transparent")
 
         self.back_to_dashboard = back_to_dashboard
+        self.open_medicines = open_medicines
 
-        self.search_var = ctk.StringVar()
+        self.search_var = ctk.StringVar(value="")
         self.filter_var = ctk.StringVar(value="All")
 
         self.build_ui()
 
-        # Update the table whenever the search text changes, including when
-        # text is pasted or cleared (not only when keys are released).
         self.search_var.trace_add("write", self._on_search_change)
 
         self.load_inventory()
@@ -55,6 +52,30 @@ class InventoryPage(ctk.CTkFrame):
         )
 
         title.pack(side="left")
+
+        # ADD MEDICINE BUTTON
+
+        add_medicine_button = ctk.CTkButton(
+            header,
+            text="➕ Add Medicine",
+            command=self.open_medicines_page,
+            width=150,
+            height=40,
+            fg_color="#16A34A",
+            hover_color="#15803D",
+            text_color="white",
+            font=ctk.CTkFont(
+                size=14,
+                weight="bold"
+            )
+        )
+
+        add_medicine_button.pack(
+            side="right",
+            padx=(0, 10)
+        )
+
+        # BACK TO DASHBOARD BUTTON
 
         back_button = ctk.CTkButton(
             header,
@@ -109,7 +130,7 @@ class InventoryPage(ctk.CTkFrame):
             4
         )
 
-        # ---------------- SEARCH / FILTER ----------------
+        # ---------------- SEARCH AND FILTER ----------------
 
         control_frame = ctk.CTkFrame(
             self,
@@ -166,7 +187,7 @@ class InventoryPage(ctk.CTkFrame):
 
         refresh_button.pack(side="left")
 
-        # ---------------- TABLE ----------------
+        # ---------------- INVENTORY TABLE ----------------
 
         table_container = ctk.CTkFrame(
             self
@@ -294,21 +315,28 @@ class InventoryPage(ctk.CTkFrame):
         self.empty_label = ctk.CTkLabel(
             table_container,
             text="",
-            font=ctk.CTkFont(
-                size=15
-            )
+            font=ctk.CTkFont(size=15)
         )
+
+    # =========================================================
+    # OPEN MEDICINES PAGE
+    # =========================================================
+
+    def open_medicines_page(self):
+
+        if callable(self.open_medicines):
+            self.open_medicines()
+        else:
+            print(
+                "Error: Medicines page callback was not provided. "
+                "Check show_inventory() in main.py."
+            )
 
     # =========================================================
     # SUMMARY CARD
     # =========================================================
 
-    def create_summary_card(
-        self,
-        parent,
-        title,
-        column
-    ):
+    def create_summary_card(self, parent, title, column):
 
         parent.grid_columnconfigure(
             column,
@@ -330,9 +358,7 @@ class InventoryPage(ctk.CTkFrame):
         title_label = ctk.CTkLabel(
             card,
             text=title,
-            font=ctk.CTkFont(
-                size=13
-            )
+            font=ctk.CTkFont(size=13)
         )
 
         title_label.pack(
@@ -355,15 +381,10 @@ class InventoryPage(ctk.CTkFrame):
         return value_label
 
     # =========================================================
-    # GET STATUS
+    # GET MEDICINE STATUS
     # =========================================================
 
-    def get_status(
-        self,
-        quantity,
-        minimum_stock,
-        expiry_date
-    ):
+    def get_status(self, quantity, minimum_stock, expiry_date):
 
         try:
 
@@ -386,40 +407,36 @@ class InventoryPage(ctk.CTkFrame):
                     ).date()
 
                 except ValueError:
-
                     expiry = datetime.strptime(
                         expiry_text,
                         "%d-%m-%Y"
                     ).date()
 
-            # ---------------- EXPIRED ----------------
+            # EXPIRED
 
             if expiry and expiry < today:
                 return "Expired"
 
-            # ---------------- OUT OF STOCK ----------------
+            # OUT OF STOCK
 
             if quantity <= 0:
                 return "Out of Stock"
 
-            # ---------------- NEAR EXPIRY ----------------
+            # NEAR EXPIRY: WITHIN 30 DAYS
 
-            if expiry:
+            if expiry and expiry <= today + timedelta(days=30):
+                return "Near Expiry"
 
-                if expiry <= today + timedelta(days=30):
-                    return "Near Expiry"
-
-            # ---------------- LOW STOCK ----------------
+            # LOW STOCK
 
             if quantity <= minimum_stock:
                 return "Low Stock"
 
-            # ---------------- NORMAL ----------------
+            # NORMAL STOCK
 
             return "In Stock"
 
-        except Exception:
-
+        except (TypeError, ValueError, OverflowError):
             return "Unknown"
 
     # =========================================================
@@ -427,10 +444,7 @@ class InventoryPage(ctk.CTkFrame):
     # =========================================================
 
     def _on_search_change(self, *_):
-        """Refresh the inventory table when the search text changes."""
-        # Tkinter variable traces can run during widget initialization.
-        # The tree exists by the time this trace is registered, but this
-        # guard also keeps the handler safe if the UI is later refactored.
+
         if hasattr(self, "tree"):
             self.load_inventory()
 
@@ -439,15 +453,21 @@ class InventoryPage(ctk.CTkFrame):
     # =========================================================
 
     def load_inventory(self):
-        """Load inventory from the database and refresh the table and counters."""
-        # Clear old rows before displaying the latest results.
+
+        if not hasattr(self, "tree"):
+            return
+
+        # CLEAR EXISTING ROWS
+
         for item in self.tree.get_children():
             self.tree.delete(item)
 
         try:
-            # Use the database connection as a context manager so it is
-            # always closed correctly, even if the query raises an error.
+
+            # FETCH INVENTORY FROM DATABASE
+
             with get_connection() as connection:
+
                 medicines = connection.execute(
                     """
                     SELECT
@@ -466,23 +486,28 @@ class InventoryPage(ctk.CTkFrame):
                     """
                 ).fetchall()
 
+            # INITIALIZE COUNTERS
+
             counts = {
                 "In Stock": 0,
                 "Low Stock": 0,
                 "Out of Stock": 0,
                 "Expired": 0,
                 "Near Expiry": 0,
-                "Unknown": 0,
+                "Unknown": 0
             }
 
             search_text = self.search_var.get().strip().casefold()
             selected_filter = self.filter_var.get()
+
             visible_rows = 0
 
+            # PROCESS MEDICINES
+
             for medicine in medicines:
-                # sqlite3.Row supports named columns; tuple fallback keeps
-                # this compatible with other row-factory configurations.
+
                 try:
+
                     medicine_id = medicine["medicine_id"]
                     name = medicine["name"]
                     category = medicine["category"]
@@ -491,7 +516,9 @@ class InventoryPage(ctk.CTkFrame):
                     quantity = medicine["quantity"]
                     minimum_stock = medicine["min_stock"]
                     expiry = medicine["expiry_date"]
+
                 except (TypeError, IndexError, KeyError):
+
                     (
                         medicine_id,
                         name,
@@ -500,32 +527,53 @@ class InventoryPage(ctk.CTkFrame):
                         supplier,
                         quantity,
                         minimum_stock,
-                        expiry,
+                        expiry
                     ) = medicine
 
                 name = name or ""
                 category = category or ""
                 batch = batch or ""
                 supplier = supplier or "Not Assigned"
+
                 quantity = 0 if quantity is None else quantity
-                minimum_stock = 0 if minimum_stock is None else minimum_stock
+                minimum_stock = (
+                    0 if minimum_stock is None else minimum_stock
+                )
+
                 expiry = expiry or ""
 
-                status = self.get_status(quantity, minimum_stock, expiry)
+                # DETERMINE STATUS
+
+                status = self.get_status(
+                    quantity,
+                    minimum_stock,
+                    expiry
+                )
+
                 counts[status] = counts.get(status, 0) + 1
 
-                # Search medicine name, category, batch number, and supplier.
+                # SEARCH FILTER
+
                 if search_text:
+
                     searchable_text = (
                         f"{name} {category} {batch} {supplier}"
                     ).casefold()
+
                     if search_text not in searchable_text:
                         continue
+
+                # STATUS FILTER
 
                 if selected_filter != "All" and status != selected_filter:
                     continue
 
+                # STATUS TAG
+
                 tag = status.lower().replace(" ", "_")
+
+                # INSERT INTO TABLE
+
                 self.tree.insert(
                     "",
                     "end",
@@ -538,39 +586,62 @@ class InventoryPage(ctk.CTkFrame):
                         quantity,
                         minimum_stock,
                         expiry,
-                        status,
+                        status
                     ),
-                    tags=(tag,),
+                    tags=(tag,)
                 )
+
                 visible_rows += 1
 
-            # Counters show totals across all medicines, independent of the
-            # currently selected search text or status filter.
-            self.in_stock_label.configure(text=str(counts["In Stock"]))
-            self.low_stock_label.configure(text=str(counts["Low Stock"]))
-            self.out_stock_label.configure(text=str(counts["Out of Stock"]))
-            self.expired_label.configure(text=str(counts["Expired"]))
-            self.near_expiry_label.configure(text=str(counts["Near Expiry"]))
+            # UPDATE SUMMARY CARDS
+
+            self.in_stock_label.configure(
+                text=str(counts["In Stock"])
+            )
+
+            self.low_stock_label.configure(
+                text=str(counts["Low Stock"])
+            )
+
+            self.out_stock_label.configure(
+                text=str(counts["Out of Stock"])
+            )
+
+            self.expired_label.configure(
+                text=str(counts["Expired"])
+            )
+
+            self.near_expiry_label.configure(
+                text=str(counts["Near Expiry"])
+            )
+
+            # EMPTY TABLE MESSAGE
 
             if visible_rows == 0:
-                self.empty_label.configure(text="No inventory records found.")
+
+                self.empty_label.configure(
+                    text="No inventory records found."
+                )
+
                 self.empty_label.place(
                     relx=0.5,
                     rely=0.5,
-                    anchor="center",
+                    anchor="center"
                 )
+
             else:
                 self.empty_label.place_forget()
 
         except Exception as error:
-            # Keep the failure visible in the terminal for debugging and
-            # show a helpful message inside the inventory page.
+
             print(f"Inventory Error: {error}")
+
             self.empty_label.configure(
                 text="Unable to load inventory. Check the database and terminal."
             )
+
             self.empty_label.place(
                 relx=0.5,
                 rely=0.5,
-                anchor="center",
+                anchor="center"
             )
