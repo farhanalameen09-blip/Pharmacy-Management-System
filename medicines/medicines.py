@@ -1,378 +1,300 @@
-import customtkinter as ctk # type: ignore
-
-from ui_kit import styled_treeview
+import customtkinter as ctk  # type: ignore
 from tkinter import ttk, messagebox
 from datetime import datetime
 
+from ui_kit import styled_treeview
 from database import get_connection
 
 
 class MedicinePage(ctk.CTkFrame):
 
     def __init__(self, parent, back_to_dashboard):
-
         super().__init__(parent, fg_color="transparent")
 
         self.back_to_dashboard = back_to_dashboard
         self.selected_medicine_id = None
-        self.supplier_map = {}
+        self.supplier_map = {"No Supplier": None}
 
-        # =====================================================
-        # VARIABLES
-        # =====================================================
-
+        # Form variables
         self.name_var = ctk.StringVar()
         self.category_var = ctk.StringVar()
         self.manufacturer_var = ctk.StringVar()
         self.batch_var = ctk.StringVar()
-
         self.purchase_var = ctk.StringVar()
         self.selling_var = ctk.StringVar()
-
         self.quantity_var = ctk.StringVar()
         self.min_stock_var = ctk.StringVar(value="10")
-
         self.expiry_var = ctk.StringVar()
         self.description_var = ctk.StringVar()
-
         self.supplier_var = ctk.StringVar(value="No Supplier")
-
         self.search_var = ctk.StringVar()
 
         self.build_ui()
         self.load_suppliers()
         self.load_medicines()
 
-    # =====================================================
-    # UI
-    # =====================================================
+    # =========================================================
+    # USER INTERFACE
+    # =========================================================
 
     def build_ui(self):
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(3, weight=1)
 
         # ---------------- HEADER ----------------
 
-        header = ctk.CTkFrame(
-            self,
-            fg_color="transparent"
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.grid(
+            row=0, column=0, sticky="ew",
+            padx=20, pady=(15, 5)
         )
+        header.grid_columnconfigure(0, weight=1)
 
-        header.pack(
-            fill="x",
-            padx=25,
-            pady=(20, 10)
-        )
-
-        title = ctk.CTkLabel(
+        ctk.CTkLabel(
             header,
             text="Medicine Management",
-            font=ctk.CTkFont(
-                size=28,
-                weight="bold"
-            )
-        )
+            font=ctk.CTkFont(size=26, weight="bold")
+        ).grid(row=0, column=0, sticky="w")
 
-        title.pack(side="left")
-
-        back_button = ctk.CTkButton(
+        ctk.CTkButton(
             header,
-            text="Back to Dashboard",
-            width=160,
-            command=self.back_to_dashboard
+            text="← Back to Dashboard",
+            command=self.back_to_dashboard,
+            width=180
+        ).grid(row=0, column=1, sticky="e")
+
+        # ---------------- MEDICINE FORM ----------------
+
+        form = ctk.CTkFrame(self, corner_radius=12)
+        form.grid(
+            row=1, column=0, sticky="ew",
+            padx=20, pady=10
         )
 
-        back_button.pack(side="right")
-
-        # =====================================================
-        # FORM
-        # =====================================================
-
-        form_frame = ctk.CTkFrame(
-            self,
-            corner_radius=12
-        )
-
-        form_frame.pack(
-            fill="x",
-            padx=25,
-            pady=10
-        )
-
-        form_title = ctk.CTkLabel(
-            form_frame,
-            text="Medicine Details",
-            font=ctk.CTkFont(
-                size=20,
-                weight="bold"
+        for col in range(4):
+            form.grid_columnconfigure(
+                col, weight=1, uniform="medicine_form"
             )
+
+        ctk.CTkLabel(
+            form,
+            text="Medicine Details",
+            font=ctk.CTkFont(size=20, weight="bold")
+        ).grid(
+            row=0, column=0, columnspan=4,
+            sticky="w", padx=15, pady=(12, 10)
         )
 
-        form_title.grid(
-            row=0,
-            column=0,
-            columnspan=4,
-            padx=15,
-            pady=(15, 10),
-            sticky="w"
-        )
-
-        # Row 1
-
+        # Medicine Name and Category
         self.create_entry(
-            form_frame,
-            "Medicine Name *",
-            self.name_var,
-            1,
-            0,
-            "Example: Paracetamol"
+            form, "Medicine Name *",
+            self.name_var, 1, 0
         )
 
         self.create_entry(
-            form_frame,
-            "Category",
-            self.category_var,
-            1,
-            1,
-            "Example: Tablet"
+            form, "Category",
+            self.category_var, 1, 2
+        )
+
+        # Manufacturer and Batch Number
+        self.create_entry(
+            form, "Manufacturer",
+            self.manufacturer_var, 3, 0
         )
 
         self.create_entry(
-            form_frame,
-            "Manufacturer",
-            self.manufacturer_var,
-            1,
-            2,
-            "Example: Cipla"
+            form, "Batch Number *",
+            self.batch_var, 3, 2
+        )
+
+        # Purchase and Selling Price
+        self.create_entry(
+            form, "Purchase Price",
+            self.purchase_var, 5, 0
         )
 
         self.create_entry(
-            form_frame,
-            "Batch Number *",
-            self.batch_var,
-            1,
-            3,
-            "Example: PCM001"
+            form, "Selling Price",
+            self.selling_var, 5, 2
         )
 
-        # Row 2
-
+        # Quantity and Minimum Stock
         self.create_entry(
-            form_frame,
-            "Purchase Price",
-            self.purchase_var,
-            2,
-            0,
-            "Example: 20"
+            form, "Quantity",
+            self.quantity_var, 7, 0
         )
 
         self.create_entry(
-            form_frame,
-            "Selling Price",
-            self.selling_var,
-            2,
-            1,
-            "Example: 25"
+            form, "Minimum Stock",
+            self.min_stock_var, 7, 2
         )
 
+        # Expiry Date
         self.create_entry(
-            form_frame,
-            "Quantity",
-            self.quantity_var,
-            2,
-            2,
-            "Example: 100"
-        )
-
-        self.create_entry(
-            form_frame,
-            "Minimum Stock",
-            self.min_stock_var,
-            2,
-            3,
-            "Example: 10"
-        )
-
-        # Row 3
-
-        self.create_entry(
-            form_frame,
-            "Expiry Date *",
+            form,
+            "Expiry Date (YYYY-MM-DD) *",
             self.expiry_var,
-            3,
-            0,
-            "YYYY-MM-DD"
+            9,
+            0
         )
 
         # Supplier
-
-        supplier_frame = ctk.CTkFrame(
-            form_frame,
-            fg_color="transparent"
-        )
-
-        supplier_frame.grid(
-            row=3,
-            column=1,
-            padx=10,
-            pady=6,
-            sticky="ew"
-        )
-
         ctk.CTkLabel(
-            supplier_frame,
+            form,
             text="Supplier"
-        ).pack(anchor="w")
+        ).grid(
+            row=9, column=2,
+            sticky="w", padx=12, pady=(5, 0)
+        )
 
         self.supplier_combo = ctk.CTkComboBox(
-            supplier_frame,
+            form,
             variable=self.supplier_var,
             values=["No Supplier"],
-            height=35
+            state="readonly"
         )
 
-        self.supplier_combo.pack(
-            fill="x",
-            pady=(3, 0)
+        self.supplier_combo.grid(
+            row=10, column=2, columnspan=2,
+            sticky="ew", padx=12, pady=(0, 8)
         )
 
-        # Description
+        # ---------------- DESCRIPTION ----------------
+        # Separate rows prevent overlap with price fields.
 
-        self.create_entry(
-            form_frame,
-            "Description",
-            self.description_var,
-            3,
-            2,
-            "Optional"
+        ctk.CTkLabel(
+            form,
+            text="Description"
+        ).grid(
+            row=11, column=0, columnspan=4,
+            sticky="w", padx=12, pady=(8, 3)
         )
 
-        # =====================================================
-        # BUTTONS
-        # =====================================================
-
-        button_frame = ctk.CTkFrame(
-            form_frame,
-            fg_color="transparent"
+        ctk.CTkEntry(
+            form,
+            textvariable=self.description_var,
+            placeholder_text="Enter medicine description (optional)"
+        ).grid(
+            row=12, column=0, columnspan=4,
+            sticky="ew", padx=12, pady=(0, 10)
         )
 
-        button_frame.grid(
-            row=3,
-            column=3,
-            padx=10,
-            pady=10,
-            sticky="e"
+        # ---------------- ACTION BUTTONS ----------------
+
+        buttons = ctk.CTkFrame(
+            form, fg_color="transparent"
         )
 
-        ctk.CTkButton(
-            button_frame,
-            text="Add",
-            width=80,
-            command=self.add_medicine
-        ).pack(
-            side="left",
-            padx=3
+        buttons.grid(
+            row=13, column=0, columnspan=4,
+            sticky="e", padx=12, pady=(0, 12)
         )
 
         ctk.CTkButton(
-            button_frame,
+            buttons,
+            text="Add Medicine",
+            command=self.add_medicine,
+            width=130
+        ).pack(side="left", padx=4)
+
+        ctk.CTkButton(
+            buttons,
             text="Update",
-            width=80,
-            command=self.update_medicine
-        ).pack(
-            side="left",
-            padx=3
-        )
+            command=self.update_medicine,
+            width=95
+        ).pack(side="left", padx=4)
 
         ctk.CTkButton(
-            button_frame,
+            buttons,
             text="Delete",
-            width=80,
-            fg_color="#c0392b",
-            hover_color="#922b21",
-            command=self.delete_medicine
-        ).pack(
-            side="left",
-            padx=3
-        )
+            command=self.delete_medicine,
+            width=95,
+            fg_color="#C0392B",
+            hover_color="#922B21"
+        ).pack(side="left", padx=4)
 
         ctk.CTkButton(
-            button_frame,
+            buttons,
             text="Clear",
-            width=80,
-            fg_color="gray",
-            hover_color="#666666",
-            command=self.clear_form
-        ).pack(
-            side="left",
-            padx=3
-        )
+            command=self.clear_form,
+            width=80
+        ).pack(side="left", padx=4)
 
-        # =====================================================
-        # SEARCH
-        # =====================================================
+        # ---------------- SEARCH SECTION ----------------
 
         search_frame = ctk.CTkFrame(
-            self,
-            fg_color="transparent"
+            self, fg_color="transparent"
         )
 
-        search_frame.pack(
-            fill="x",
-            padx=25,
-            pady=5
+        search_frame.grid(
+            row=2, column=0, sticky="ew",
+            padx=20, pady=(5, 5)
         )
 
-        search_entry = ctk.CTkEntry(
+        search_frame.grid_columnconfigure(0, weight=1)
+
+        ctk.CTkLabel(
             search_frame,
+            text="Medicine Inventory",
+            font=ctk.CTkFont(size=20, weight="bold")
+        ).grid(
+            row=0, column=0,
+            sticky="w", pady=(0, 8)
+        )
+
+        search_controls = ctk.CTkFrame(
+            search_frame, fg_color="transparent"
+        )
+
+        search_controls.grid(
+            row=1, column=0, sticky="ew"
+        )
+
+        self.search_entry = ctk.CTkEntry(
+            search_controls,
             textvariable=self.search_var,
-            placeholder_text="Search medicine, category, manufacturer, batch or supplier...",
-            height=38
+            placeholder_text=(
+                "Search by name, category, manufacturer or batch..."
+            )
         )
 
-        search_entry.pack(
-            side="left",
-            fill="x",
-            expand=True
+        self.search_entry.pack(
+            side="left", fill="x", expand=True,
+            padx=(0, 8)
         )
 
-        search_entry.bind(
-            "<KeyRelease>",
+        self.search_entry.bind(
+            "<Return>",
             lambda event: self.search_medicines()
         )
 
         ctk.CTkButton(
-            search_frame,
+            search_controls,
             text="Search",
-            width=100,
-            command=self.search_medicines
-        ).pack(
-            side="left",
-            padx=5
-        )
+            command=self.search_medicines,
+            width=100
+        ).pack(side="left", padx=3)
 
         ctk.CTkButton(
-            search_frame,
+            search_controls,
             text="Refresh",
-            width=100,
-            command=self.refresh_data
-        ).pack(
-            side="left"
-        )
+            command=self.refresh_data,
+            width=100
+        ).pack(side="left", padx=3)
 
-        # =====================================================
-        # TABLE
-        # =====================================================
+        # ---------------- MEDICINE TABLE ----------------
 
         table_frame = ctk.CTkFrame(
-            self,
-            corner_radius=10
+            self, corner_radius=10
         )
 
-        table_frame.pack(
-            fill="both",
-            expand=True,
-            padx=25,
-            pady=(5, 20)
+        table_frame.grid(
+            row=3, column=0, sticky="nsew",
+            padx=20, pady=(5, 15)
         )
+
+        table_frame.grid_rowconfigure(0, weight=1)
+        table_frame.grid_columnconfigure(0, weight=1)
 
         columns = (
             "id",
@@ -391,39 +313,39 @@ class MedicinePage(ctk.CTkFrame):
         self.tree = styled_treeview(
             table_frame,
             columns=columns,
-            show="headings"
+            show="headings",
+            height=12
         )
 
         headings = {
             "id": "ID",
-            "name": "Medicine",
+            "name": "Medicine Name",
             "category": "Category",
             "manufacturer": "Manufacturer",
-            "batch": "Batch",
-            "purchase": "Purchase",
-            "selling": "Selling",
+            "batch": "Batch No.",
+            "purchase": "Purchase Price",
+            "selling": "Selling Price",
             "quantity": "Quantity",
-            "min_stock": "Min Stock",
-            "expiry": "Expiry",
+            "min_stock": "Min. Stock",
+            "expiry": "Expiry Date",
             "supplier": "Supplier"
         }
 
         widths = {
-            "id": 50,
-            "name": 150,
-            "category": 100,
-            "manufacturer": 120,
+            "id": 55,
+            "name": 160,
+            "category": 110,
+            "manufacturer": 130,
             "batch": 100,
-            "purchase": 90,
-            "selling": 90,
-            "quantity": 80,
-            "min_stock": 80,
-            "expiry": 105,
-            "supplier": 130
+            "purchase": 110,
+            "selling": 110,
+            "quantity": 85,
+            "min_stock": 85,
+            "expiry": 110,
+            "supplier": 140
         }
 
         for column in columns:
-
             self.tree.heading(
                 column,
                 text=headings[column]
@@ -432,23 +354,13 @@ class MedicinePage(ctk.CTkFrame):
             self.tree.column(
                 column,
                 width=widths[column],
+                minwidth=50,
                 anchor="center"
             )
 
-        self.tree.column(
-            "name",
-            anchor="w"
-        )
-
-        self.tree.bind(
-            "<Double-1>",
-            self.select_medicine
-        )
-
-        self.tree.pack(
-            side="left",
-            fill="both",
-            expand=True
+        self.tree.grid(
+            row=0, column=0, sticky="nsew",
+            padx=(8, 0), pady=8
         )
 
         scrollbar_y = ttk.Scrollbar(
@@ -457,112 +369,86 @@ class MedicinePage(ctk.CTkFrame):
             command=self.tree.yview
         )
 
-        scrollbar_y.pack(
-            side="right",
-            fill="y"
-        )
-
-        self.tree.configure(
-            yscrollcommand=scrollbar_y.set
+        scrollbar_y.grid(
+            row=0, column=1,
+            sticky="ns", pady=8
         )
 
         scrollbar_x = ttk.Scrollbar(
-            self,
+            table_frame,
             orient="horizontal",
             command=self.tree.xview
         )
 
-        scrollbar_x.pack(
-            fill="x",
-            padx=25
+        scrollbar_x.grid(
+            row=1, column=0,
+            sticky="ew", padx=(8, 0), pady=(0, 8)
         )
 
         self.tree.configure(
+            yscrollcommand=scrollbar_y.set,
             xscrollcommand=scrollbar_x.set
         )
 
-    # =====================================================
-    # ENTRY CREATOR
-    # =====================================================
+        self.tree.bind(
+            "<Double-1>",
+            self.select_medicine
+        )
+
+    # =========================================================
+    # CREATE FORM ENTRY
+    # =========================================================
 
     def create_entry(
-        self,
-        parent,
-        label,
-        variable,
-        row,
-        column,
-        placeholder=""
+        self, parent, label, variable, row, column
     ):
-
-        frame = ctk.CTkFrame(
+        ctk.CTkLabel(
             parent,
-            fg_color="transparent"
-        )
-
-        frame.grid(
+            text=label
+        ).grid(
             row=row,
             column=column,
-            padx=10,
-            pady=6,
-            sticky="ew"
+            sticky="w",
+            padx=12,
+            pady=(5, 0)
         )
 
-        parent.grid_columnconfigure(
-            column,
-            weight=1
+        entry = ctk.CTkEntry(
+            parent,
+            textvariable=variable
         )
 
-        ctk.CTkLabel(
-            frame,
-            text=label
-        ).pack(
-            anchor="w"
+        entry.grid(
+            row=row + 1,
+            column=column,
+            sticky="ew",
+            padx=12,
+            pady=(0, 8)
         )
 
-        ctk.CTkEntry(
-            frame,
-            textvariable=variable,
-            height=35,
-            placeholder_text=placeholder
-        ).pack(
-            fill="x",
-            pady=(3, 0)
-        )
+        return entry
 
-    # =====================================================
-    # SUPPLIERS
-    # =====================================================
+    # =========================================================
+    # SUPPLIER MANAGEMENT
+    # =========================================================
 
     def load_suppliers(self):
-
-        connection = None
+        self.supplier_map = {"No Supplier": None}
+        values = ["No Supplier"]
 
         try:
+            with get_connection() as connection:
+                cursor = connection.cursor()
 
-            connection = get_connection()
-            cursor = connection.cursor()
+                cursor.execute("""
+                    SELECT supplier_id, name
+                    FROM suppliers
+                    ORDER BY name
+                """)
 
-            cursor.execute(
-                """
-                SELECT supplier_id, name
-                FROM suppliers
-                ORDER BY name
-                """
-            )
-
-            suppliers = cursor.fetchall()
-
-            self.supplier_map = {
-                "No Supplier": None
-            }
-
-            values = [
-                "No Supplier"
-            ]
+                suppliers = cursor.fetchall()
 
             for supplier in suppliers:
-
                 supplier_id = supplier["supplier_id"]
                 supplier_name = supplier["name"]
 
@@ -570,98 +456,82 @@ class MedicinePage(ctk.CTkFrame):
                     f"{supplier_id} - {supplier_name}"
                 )
 
-                self.supplier_map[
-                    display_name
-                ] = supplier_id
-
-                values.append(
-                    display_name
-                )
+                self.supplier_map[display_name] = supplier_id
+                values.append(display_name)
 
             self.supplier_combo.configure(
                 values=values
             )
 
+            if self.supplier_var.get() not in values:
+                self.supplier_var.set("No Supplier")
+
         except Exception as error:
-
-            print(
-                "Load suppliers error:",
-                error
-            )
-
-            self.supplier_map = {
-                "No Supplier": None
-            }
+            print("Load suppliers error:", error)
 
             self.supplier_combo.configure(
                 values=["No Supplier"]
             )
 
-        finally:
-
-            if connection:
-                connection.close()
+            self.supplier_var.set("No Supplier")
 
     def get_supplier_id(self):
-
         return self.supplier_map.get(
             self.supplier_var.get()
         )
 
-    def get_supplier_display(
-        self,
-        supplier_id
-    ):
-
+    def get_supplier_display(self, supplier_id):
         if supplier_id is None:
             return "No Supplier"
 
-        for name, value in self.supplier_map.items():
-
-            if value == supplier_id:
-                return name
+        for display_name, current_id in self.supplier_map.items():
+            if current_id == supplier_id:
+                return display_name
 
         return "No Supplier"
 
-    # =====================================================
+    # =========================================================
     # VALIDATION
-    # =====================================================
+    # =========================================================
 
     def validate(self):
-
         name = self.name_var.get().strip()
         batch = self.batch_var.get().strip()
         expiry = self.expiry_var.get().strip()
 
         if not name:
-
             messagebox.showwarning(
-                "Validation",
-                "Please enter medicine name."
+                "Validation Error",
+                "Medicine name is required."
             )
-
             return False
 
         if not batch:
-
             messagebox.showwarning(
-                "Validation",
-                "Please enter batch number."
+                "Validation Error",
+                "Batch number is required."
             )
-
             return False
 
         if not expiry:
-
             messagebox.showwarning(
-                "Validation",
-                "Please enter expiry date."
+                "Validation Error",
+                "Expiry date is required."
             )
-
             return False
 
         try:
+            datetime.strptime(expiry, "%Y-%m-%d")
 
+        except ValueError:
+            messagebox.showwarning(
+                "Invalid Expiry Date",
+                "Enter expiry date in YYYY-MM-DD format.\n"
+                "Example: 2027-12-31"
+            )
+            return False
+
+        try:
             purchase = float(
                 self.purchase_var.get() or 0
             )
@@ -674,52 +544,35 @@ class MedicinePage(ctk.CTkFrame):
                 self.quantity_var.get() or 0
             )
 
-            minimum = int(
+            min_stock = int(
                 self.min_stock_var.get() or 0
             )
 
-            if purchase < 0:
-                raise ValueError
+            if purchase < 0 or selling < 0:
+                messagebox.showwarning(
+                    "Invalid Price",
+                    "Prices cannot be negative."
+                )
+                return False
 
-            if selling < 0:
-                raise ValueError
-
-            if quantity < 0:
-                raise ValueError
-
-            if minimum < 0:
-                raise ValueError
-
-        except ValueError:
-
-            messagebox.showwarning(
-                "Validation",
-                "Please enter valid non-negative prices and quantities."
-            )
-
-            return False
-
-        try:
-
-            datetime.strptime(
-                expiry,
-                "%Y-%m-%d"
-            )
+            if quantity < 0 or min_stock < 0:
+                messagebox.showwarning(
+                    "Invalid Stock",
+                    "Quantity and minimum stock cannot be negative."
+                )
+                return False
 
         except ValueError:
-
             messagebox.showwarning(
-                "Validation",
-                "Expiry date must be in YYYY-MM-DD format."
+                "Invalid Input",
+                "Enter valid numeric values for prices and stock."
             )
-
             return False
 
         if selling < purchase:
-
             answer = messagebox.askyesno(
                 "Price Warning",
-                "Selling price is lower than purchase price.\n\n"
+                "Selling price is lower than purchase price.\n"
                 "Do you want to continue?"
             )
 
@@ -728,64 +581,51 @@ class MedicinePage(ctk.CTkFrame):
 
         return True
 
-    # =====================================================
-    # ADD
-    # =====================================================
+    def get_form_values(self):
+        return (
+            self.name_var.get().strip(),
+            self.category_var.get().strip(),
+            self.manufacturer_var.get().strip(),
+            self.batch_var.get().strip(),
+            float(self.purchase_var.get() or 0),
+            float(self.selling_var.get() or 0),
+            int(self.quantity_var.get() or 0),
+            int(self.min_stock_var.get() or 0),
+            self.expiry_var.get().strip(),
+            self.get_supplier_id(),
+            self.description_var.get().strip()
+        )
+
+    # =========================================================
+    # ADD MEDICINE
+    # =========================================================
 
     def add_medicine(self):
-
         if not self.validate():
             return
 
-        connection = None
+        values = self.get_form_values()
 
         try:
+            with get_connection() as connection:
+                cursor = connection.cursor()
 
-            connection = get_connection()
-            cursor = connection.cursor()
-
-            cursor.execute(
-                """
-                INSERT INTO medicines
-                (
-                    name,
-                    category,
-                    manufacturer,
-                    batch_no,
-                    purchase_price,
-                    selling_price,
-                    quantity,
-                    min_stock,
-                    expiry_date,
-                    supplier_id,
-                    description
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    self.name_var.get().strip(),
-                    self.category_var.get().strip(),
-                    self.manufacturer_var.get().strip(),
-                    self.batch_var.get().strip(),
-                    float(
-                        self.purchase_var.get() or 0
-                    ),
-                    float(
-                        self.selling_var.get() or 0
-                    ),
-                    int(
-                        self.quantity_var.get() or 0
-                    ),
-                    int(
-                        self.min_stock_var.get() or 0
-                    ),
-                    self.expiry_var.get().strip(),
-                    self.get_supplier_id(),
-                    self.description_var.get().strip()
-                )
-            )
-
-            connection.commit()
+                cursor.execute("""
+                    INSERT INTO medicines (
+                        name,
+                        category,
+                        manufacturer,
+                        batch_no,
+                        purchase_price,
+                        selling_price,
+                        quantity,
+                        min_stock,
+                        expiry_date,
+                        supplier_id,
+                        description
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, values)
 
             messagebox.showinfo(
                 "Success",
@@ -796,124 +636,76 @@ class MedicinePage(ctk.CTkFrame):
             self.load_medicines()
 
         except Exception as error:
-
             if "UNIQUE" in str(error).upper():
-
                 messagebox.showerror(
-                    "Duplicate Batch",
-                    "This batch number already exists."
+                    "Duplicate Medicine",
+                    "This batch number may already exist."
                 )
-
             else:
-
                 messagebox.showerror(
                     "Database Error",
-                    f"Unable to add medicine.\n\n{error}"
+                    f"Could not add medicine.\n\n{error}"
                 )
 
-            print(
-                "Add medicine error:",
-                error
-            )
-
-        finally:
-
-            if connection:
-                connection.close()
-
-    # =====================================================
-    # LOAD
-    # =====================================================
+    # =========================================================
+    # LOAD MEDICINES
+    # =========================================================
 
     def load_medicines(self):
-
-        self.clear_table()
-
-        connection = None
-
         try:
+            with get_connection() as connection:
+                cursor = connection.cursor()
 
-            connection = get_connection()
-            cursor = connection.cursor()
+                cursor.execute("""
+                    SELECT
+                        m.medicine_id,
+                        m.name,
+                        m.category,
+                        m.manufacturer,
+                        m.batch_no,
+                        m.purchase_price,
+                        m.selling_price,
+                        m.quantity,
+                        m.min_stock,
+                        m.expiry_date,
+                        m.supplier_id,
+                        COALESCE(
+                            s.name, 'No Supplier'
+                        ) AS supplier_name
+                    FROM medicines m
+                    LEFT JOIN suppliers s
+                        ON m.supplier_id = s.supplier_id
+                    ORDER BY m.medicine_id DESC
+                """)
 
-            cursor.execute(
-                """
-                SELECT
-                    m.medicine_id,
-                    m.name,
-                    m.category,
-                    m.manufacturer,
-                    m.batch_no,
-                    m.purchase_price,
-                    m.selling_price,
-                    m.quantity,
-                    m.min_stock,
-                    m.expiry_date,
-                    m.supplier_id,
-                    COALESCE(
-                        s.name,
-                        'No Supplier'
-                    ) AS supplier_name
-                FROM medicines m
-                LEFT JOIN suppliers s
-                    ON m.supplier_id = s.supplier_id
-                ORDER BY m.medicine_id DESC
-                """
-            )
+                medicines = cursor.fetchall()
 
-            medicines = cursor.fetchall()
+            self.clear_table()
 
             for medicine in medicines:
-
-                self.insert_into_table(
-                    medicine
-                )
+                self.insert_into_table(medicine)
 
         except Exception as error:
+            print("Load medicines error:", error)
 
             messagebox.showerror(
                 "Database Error",
-                f"Unable to load medicines.\n\n{error}"
+                f"Could not load medicines.\n\n{error}"
             )
 
-            print(
-                "Load medicines error:",
-                error
-            )
-
-        finally:
-
-            if connection:
-                connection.close()
-
-    # =====================================================
-    # TABLE
-    # =====================================================
-
-    def insert_into_table(
-        self,
-        medicine
-    ):
-
+    def insert_into_table(self, medicine):
         try:
-
             purchase = float(
                 medicine["purchase_price"] or 0
             )
-
-        except (TypeError, ValueError):
-
-            purchase = 0
-
-        try:
 
             selling = float(
                 medicine["selling_price"] or 0
             )
 
         except (TypeError, ValueError):
-
-            selling = 0
+            purchase = 0.0
+            selling = 0.0
 
         self.tree.insert(
             "",
@@ -926,445 +718,322 @@ class MedicinePage(ctk.CTkFrame):
                 medicine["batch_no"] or "",
                 f"Rs. {purchase:.2f}",
                 f"Rs. {selling:.2f}",
-                medicine["quantity"] or 0,
-                medicine["min_stock"] or 0,
+                medicine["quantity"],
+                medicine["min_stock"],
                 medicine["expiry_date"] or "",
                 medicine["supplier_name"] or "No Supplier"
             )
         )
 
-    # =====================================================
-    # SEARCH
-    # =====================================================
+    # =========================================================
+    # SEARCH MEDICINES
+    # =========================================================
 
     def search_medicines(self):
+        search_text = self.search_var.get().strip()
 
-        search = self.search_var.get().strip()
-
-        if not search:
-
+        if not search_text:
             self.load_medicines()
-
             return
 
-        self.clear_table()
-
-        connection = None
+        pattern = f"%{search_text}%"
 
         try:
+            with get_connection() as connection:
+                cursor = connection.cursor()
 
-            connection = get_connection()
-            cursor = connection.cursor()
+                cursor.execute("""
+                    SELECT
+                        m.medicine_id,
+                        m.name,
+                        m.category,
+                        m.manufacturer,
+                        m.batch_no,
+                        m.purchase_price,
+                        m.selling_price,
+                        m.quantity,
+                        m.min_stock,
+                        m.expiry_date,
+                        m.supplier_id,
+                        COALESCE(
+                            s.name, 'No Supplier'
+                        ) AS supplier_name
+                    FROM medicines m
+                    LEFT JOIN suppliers s
+                        ON m.supplier_id = s.supplier_id
+                    WHERE
+                        m.name LIKE ?
+                        OR COALESCE(m.category, '') LIKE ?
+                        OR COALESCE(m.manufacturer, '') LIKE ?
+                        OR m.batch_no LIKE ?
+                        OR COALESCE(s.name, '') LIKE ?
+                    ORDER BY m.medicine_id DESC
+                """, (
+                    pattern,
+                    pattern,
+                    pattern,
+                    pattern,
+                    pattern
+                ))
 
-            cursor.execute(
-                """
-                SELECT
-                    m.medicine_id,
-                    m.name,
-                    m.category,
-                    m.manufacturer,
-                    m.batch_no,
-                    m.purchase_price,
-                    m.selling_price,
-                    m.quantity,
-                    m.min_stock,
-                    m.expiry_date,
-                    m.supplier_id,
-                    COALESCE(
-                        s.name,
-                        'No Supplier'
-                    ) AS supplier_name
-                FROM medicines m
-                LEFT JOIN suppliers s
-                    ON m.supplier_id = s.supplier_id
-                WHERE
-                    m.name LIKE ?
-                    OR m.category LIKE ?
-                    OR m.manufacturer LIKE ?
-                    OR m.batch_no LIKE ?
-                    OR s.name LIKE ?
-                ORDER BY m.medicine_id DESC
-                """,
-                (
-                    f"%{search}%",
-                    f"%{search}%",
-                    f"%{search}%",
-                    f"%{search}%",
-                    f"%{search}%"
-                )
-            )
+                medicines = cursor.fetchall()
 
-            medicines = cursor.fetchall()
+            self.clear_table()
 
             for medicine in medicines:
+                self.insert_into_table(medicine)
 
-                self.insert_into_table(
-                    medicine
+            if not medicines:
+                messagebox.showinfo(
+                    "Search Results",
+                    "No medicines found."
                 )
 
         except Exception as error:
-
             messagebox.showerror(
                 "Search Error",
-                f"Unable to search medicines.\n\n{error}"
+                f"Could not search medicines.\n\n{error}"
             )
 
-            print(
-                "Search error:",
-                error
-            )
+    # =========================================================
+    # SELECT MEDICINE
+    # =========================================================
 
-        finally:
+    def select_medicine(self, event=None):
+        selection = self.tree.selection()
 
-            if connection:
-                connection.close()
-
-    # =====================================================
-    # SELECT
-    # =====================================================
-
-    def select_medicine(
-        self,
-        event=None
-    ):
-
-        selected = self.tree.selection()
-
-        if not selected:
+        if not selection:
             return
 
-        values = self.tree.item(
-            selected[0]
-        )["values"]
+        item = self.tree.item(selection[0])
+        values = item.get("values", [])
 
         if not values:
             return
 
-        self.selected_medicine_id = values[0]
-
-        connection = None
+        medicine_id = values[0]
 
         try:
+            with get_connection() as connection:
+                cursor = connection.cursor()
 
-            connection = get_connection()
-            cursor = connection.cursor()
+                cursor.execute("""
+                    SELECT *
+                    FROM medicines
+                    WHERE medicine_id = ?
+                """, (medicine_id,))
 
-            cursor.execute(
-                """
-                SELECT *
-                FROM medicines
-                WHERE medicine_id = ?
-                """,
-                (
-                    self.selected_medicine_id,
+                medicine = cursor.fetchone()
+
+            if medicine is None:
+                messagebox.showwarning(
+                    "Not Found",
+                    "The selected medicine no longer exists."
                 )
+
+                self.load_medicines()
+                return
+
+            self.selected_medicine_id = medicine["medicine_id"]
+
+            self.name_var.set(medicine["name"] or "")
+            self.category_var.set(medicine["category"] or "")
+            self.manufacturer_var.set(
+                medicine["manufacturer"] or ""
+            )
+            self.batch_var.set(medicine["batch_no"] or "")
+
+            self.purchase_var.set(
+                str(medicine["purchase_price"] or 0)
             )
 
-            medicine = cursor.fetchone()
+            self.selling_var.set(
+                str(medicine["selling_price"] or 0)
+            )
 
-            if medicine:
+            self.quantity_var.set(
+                str(medicine["quantity"] or 0)
+            )
 
-                self.name_var.set(
-                    medicine["name"] or ""
+            self.min_stock_var.set(
+                str(medicine["min_stock"] or 0)
+            )
+
+            self.expiry_var.set(
+                medicine["expiry_date"] or ""
+            )
+
+            self.description_var.set(
+                medicine["description"] or ""
+            )
+
+            self.supplier_var.set(
+                self.get_supplier_display(
+                    medicine["supplier_id"]
                 )
-
-                self.category_var.set(
-                    medicine["category"] or ""
-                )
-
-                self.manufacturer_var.set(
-                    medicine["manufacturer"] or ""
-                )
-
-                self.batch_var.set(
-                    medicine["batch_no"] or ""
-                )
-
-                self.purchase_var.set(
-                    medicine["purchase_price"]
-                    if medicine["purchase_price"] is not None
-                    else ""
-                )
-
-                self.selling_var.set(
-                    medicine["selling_price"]
-                    if medicine["selling_price"] is not None
-                    else ""
-                )
-
-                self.quantity_var.set(
-                    medicine["quantity"]
-                    if medicine["quantity"] is not None
-                    else ""
-                )
-
-                self.min_stock_var.set(
-                    medicine["min_stock"]
-                    if medicine["min_stock"] is not None
-                    else "10"
-                )
-
-                self.expiry_var.set(
-                    medicine["expiry_date"] or ""
-                )
-
-                self.description_var.set(
-                    medicine["description"] or ""
-                )
-
-                self.supplier_var.set(
-                    self.get_supplier_display(
-                        medicine["supplier_id"]
-                    )
-                )
+            )
 
         except Exception as error:
-
             messagebox.showerror(
-                "Error",
-                f"Unable to select medicine.\n\n{error}"
+                "Selection Error",
+                f"Could not load the selected medicine.\n\n{error}"
             )
 
-            print(
-                "Select medicine error:",
-                error
-            )
-
-        finally:
-
-            if connection:
-                connection.close()
-
-    # =====================================================
-    # UPDATE
-    # =====================================================
+    # =========================================================
+    # UPDATE MEDICINE
+    # =========================================================
 
     def update_medicine(self):
-
-        if not self.selected_medicine_id:
-
+        if self.selected_medicine_id is None:
             messagebox.showwarning(
-                "Update Medicine",
-                "Please double-click a medicine from the table first."
+                "Select Medicine",
+                "Double-click a medicine in the table before updating."
             )
-
             return
 
         if not self.validate():
             return
 
-        connection = None
+        values = self.get_form_values()
 
         try:
+            with get_connection() as connection:
+                cursor = connection.cursor()
 
-            connection = get_connection()
-            cursor = connection.cursor()
+                cursor.execute("""
+                    UPDATE medicines
+                    SET
+                        name = ?,
+                        category = ?,
+                        manufacturer = ?,
+                        batch_no = ?,
+                        purchase_price = ?,
+                        selling_price = ?,
+                        quantity = ?,
+                        min_stock = ?,
+                        expiry_date = ?,
+                        supplier_id = ?,
+                        description = ?
+                    WHERE medicine_id = ?
+                """, values + (self.selected_medicine_id,))
 
-            cursor.execute(
-                """
-                UPDATE medicines
+                updated_rows = cursor.rowcount
 
-                SET
-                    name = ?,
-                    category = ?,
-                    manufacturer = ?,
-                    batch_no = ?,
-                    purchase_price = ?,
-                    selling_price = ?,
-                    quantity = ?,
-                    min_stock = ?,
-                    expiry_date = ?,
-                    supplier_id = ?,
-                    description = ?
-
-                WHERE medicine_id = ?
-                """,
-                (
-                    self.name_var.get().strip(),
-                    self.category_var.get().strip(),
-                    self.manufacturer_var.get().strip(),
-                    self.batch_var.get().strip(),
-                    float(
-                        self.purchase_var.get() or 0
-                    ),
-                    float(
-                        self.selling_var.get() or 0
-                    ),
-                    int(
-                        self.quantity_var.get() or 0
-                    ),
-                    int(
-                        self.min_stock_var.get() or 0
-                    ),
-                    self.expiry_var.get().strip(),
-                    self.get_supplier_id(),
-                    self.description_var.get().strip(),
-                    self.selected_medicine_id
+            if updated_rows > 0:
+                messagebox.showinfo(
+                    "Success",
+                    "Medicine updated successfully."
                 )
-            )
-
-            connection.commit()
-
-            messagebox.showinfo(
-                "Success",
-                "Medicine updated successfully."
-            )
+            else:
+                messagebox.showwarning(
+                    "Not Found",
+                    "The selected medicine was not found."
+                )
 
             self.clear_form()
             self.load_medicines()
 
         except Exception as error:
-
             if "UNIQUE" in str(error).upper():
-
                 messagebox.showerror(
-                    "Duplicate Batch",
-                    "This batch number already exists."
+                    "Duplicate Medicine",
+                    "This batch number may already exist."
                 )
-
             else:
-
                 messagebox.showerror(
                     "Update Error",
-                    f"Unable to update medicine.\n\n{error}"
+                    f"Could not update medicine.\n\n{error}"
                 )
 
-            print(
-                "Update medicine error:",
-                error
-            )
-
-        finally:
-
-            if connection:
-                connection.close()
-
-    # =====================================================
-    # DELETE
-    # =====================================================
+    # =========================================================
+    # DELETE MEDICINE
+    # =========================================================
 
     def delete_medicine(self):
-
-        if not self.selected_medicine_id:
-
+        if self.selected_medicine_id is None:
             messagebox.showwarning(
-                "Delete Medicine",
-                "Please double-click a medicine from the table first."
+                "Select Medicine",
+                "Double-click a medicine in the table before deleting."
             )
-
             return
 
         confirm = messagebox.askyesno(
-            "Delete Medicine",
-            "Are you sure you want to delete this medicine?"
+            "Confirm Delete",
+            "Are you sure you want to delete this medicine?\n\n"
+            "This action cannot be undone."
         )
 
         if not confirm:
             return
 
-        connection = None
-
         try:
+            with get_connection() as connection:
+                cursor = connection.cursor()
 
-            connection = get_connection()
-            cursor = connection.cursor()
+                cursor.execute("""
+                    DELETE FROM medicines
+                    WHERE medicine_id = ?
+                """, (self.selected_medicine_id,))
 
-            cursor.execute(
-                """
-                DELETE FROM medicines
-                WHERE medicine_id = ?
-                """,
-                (
-                    self.selected_medicine_id,
+                deleted_rows = cursor.rowcount
+
+            if deleted_rows > 0:
+                messagebox.showinfo(
+                    "Success",
+                    "Medicine deleted successfully."
                 )
-            )
-
-            connection.commit()
-
-            messagebox.showinfo(
-                "Success",
-                "Medicine deleted successfully."
-            )
+            else:
+                messagebox.showwarning(
+                    "Not Found",
+                    "The selected medicine was not found."
+                )
 
             self.clear_form()
             self.load_medicines()
 
         except Exception as error:
-
             messagebox.showerror(
                 "Delete Error",
-                f"Unable to delete medicine.\n\n{error}"
+                "Could not delete this medicine.\n\n"
+                f"{error}\n\n"
+                "It may be linked to an existing sale or invoice."
             )
 
-            print(
-                "Delete medicine error:",
-                error
-            )
-
-        finally:
-
-            if connection:
-                connection.close()
-
-    # =====================================================
-    # CLEAR
-    # =====================================================
+    # =========================================================
+    # CLEAR FORM
+    # =========================================================
 
     def clear_form(self):
-
         self.selected_medicine_id = None
 
         self.name_var.set("")
         self.category_var.set("")
         self.manufacturer_var.set("")
         self.batch_var.set("")
-
         self.purchase_var.set("")
         self.selling_var.set("")
-
         self.quantity_var.set("")
         self.min_stock_var.set("10")
-
         self.expiry_var.set("")
         self.description_var.set("")
+        self.supplier_var.set("No Supplier")
 
-        self.supplier_var.set(
-            "No Supplier"
-        )
+        for item in self.tree.selection():
+            self.tree.selection_remove(item)
 
-        try:
-
-            for item in self.tree.selection():
-
-                self.tree.selection_remove(
-                    item
-                )
-
-        except Exception:
-            pass
-
-    # =====================================================
+    # =========================================================
     # CLEAR TABLE
-    # =====================================================
+    # =========================================================
 
     def clear_table(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
 
-        if hasattr(
-            self,
-            "tree"
-        ):
-
-            for item in self.tree.get_children():
-
-                self.tree.delete(
-                    item
-                )
-
-    # =====================================================
+    # =========================================================
     # REFRESH
-    # =====================================================
+    # =========================================================
 
     def refresh_data(self):
-
+        self.search_var.set("")
         self.load_suppliers()
         self.load_medicines()
