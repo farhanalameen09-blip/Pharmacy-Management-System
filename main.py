@@ -24,7 +24,7 @@ from ui_kit import apply_theme
 from login.login import LoginFrame
 from medicines.medicines import MedicinePage
 from inventory.inventory import InventoryPage
-from billing.sales_billing import BillingPage
+from billing.billing import BillingPage
 from customers.customers import CustomerPage
 from suppliers.suppliers import SupplierPage
 from reports.reports import ReportsPage
@@ -231,10 +231,11 @@ class PharmacyApp(ctk.CTk):
     # ======================================================
 
     def apply_saved_theme(self):
-        """Load the logged-in user's saved appearance setting."""
+        """Load the most recently saved appearance setting for this user."""
 
         if self.current_user_id is None:
             self.theme_mode = "light"
+            self.apply_current_theme()
             return
 
         row = self.fetch_one(
@@ -242,6 +243,8 @@ class PharmacyApp(ctk.CTk):
             SELECT theme
             FROM user_settings
             WHERE user_id = ?
+            ORDER BY setting_id DESC
+            LIMIT 1
             """,
             (self.current_user_id,),
         )
@@ -258,35 +261,28 @@ class PharmacyApp(ctk.CTk):
 
         try:
             ctk.set_appearance_mode(self.theme_mode)
-
             try:
                 apply_theme(self.theme_mode)
             except TypeError:
-                # Some UI kits accept no theme argument.
+                # Some UI kits may not accept a theme argument.
                 pass
-            except Exception:
-                pass
-
+            except Exception as error:
+                print(f"UI theme styling warning: {error}")
         except Exception as error:
             print(f"Theme error: {error}")
 
     def toggle_theme(self):
         """Switch between light and dark appearance."""
 
-        self.theme_mode = (
-            "dark"
-            if self.theme_mode == "light"
-            else "light"
-        )
-
+        self.theme_mode = "dark" if self.theme_mode == "light" else "light"
         self.apply_current_theme()
         self.save_theme_preference()
 
-        # Rebuild the current page to refresh its appearance.
+        # Rebuild the current page so the new theme is visible.
         self.show_dashboard_page()
 
     def save_theme_preference(self):
-        """Save the theme for the current user."""
+        """Save the theme using the existing user_settings schema."""
 
         if self.current_user_id is None:
             return
@@ -297,25 +293,21 @@ class PharmacyApp(ctk.CTk):
 
                 cursor.execute(
                     """
-                    CREATE TABLE IF NOT EXISTS user_settings (
-                        user_id INTEGER PRIMARY KEY,
-                        theme TEXT DEFAULT 'light'
-                    )
-                    """
+                    UPDATE user_settings
+                    SET theme = ?
+                    WHERE user_id = ?
+                    """,
+                    (self.theme_mode, self.current_user_id),
                 )
 
-                cursor.execute(
-                    """
-                    INSERT INTO user_settings (user_id, theme)
-                    VALUES (?, ?)
-                    ON CONFLICT(user_id)
-                    DO UPDATE SET theme = excluded.theme
-                    """,
-                    (
-                        self.current_user_id,
-                        self.theme_mode,
-                    ),
-                )
+                if cursor.rowcount == 0:
+                    cursor.execute(
+                        """
+                        INSERT INTO user_settings (user_id, theme)
+                        VALUES (?, ?)
+                        """,
+                        (self.current_user_id, self.theme_mode),
+                    )
 
         except Exception as error:
             print(f"Could not save theme preference: {error}")
